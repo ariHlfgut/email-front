@@ -16,6 +16,7 @@ import EmailForm from './components/EmailForm';
 import PrefixManager from './components/PrefixManager';
 import axios from 'axios';
 import { keyframes } from '@mui/system';
+import { AuthDialog } from './components/AuthDialog';
 
 // אנימציות
 const fadeIn = keyframes`
@@ -91,7 +92,40 @@ const rtlTheme = createTheme({
 const domain = '0541234.com';  // הדומיין הקבוע
 
 function App() {
-  const [allowedEmails, setAllowedEmails] = useState<string[]>(['ari', 'aly', 'support']);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [allowedEmails, setAllowedEmails] = useState<string[]>([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('auth-token');
+    const timestamp = localStorage.getItem('auth-timestamp');
+    
+    if (token && timestamp) {
+      const lastAuth = new Date(timestamp);
+      const now = new Date();
+      
+      // בדיקה אם עבר יום מהאימות האחרון
+      if (lastAuth.getDate() === now.getDate() && 
+          lastAuth.getMonth() === now.getMonth() && 
+          lastAuth.getFullYear() === now.getFullYear()) {
+        setIsAuthenticated(true);
+      } else {
+        localStorage.removeItem('auth-token');
+        localStorage.removeItem('auth-timestamp');
+      }
+    }
+  }, []);
+
+  // עדכון ה-axios להוסיף את הטוקן לכל בקשה
+  useEffect(() => {
+    const token = localStorage.getItem('auth-token');
+    if (token) {
+      axios.defaults.headers.common['x-auth-token'] = token;
+    }
+  }, [isAuthenticated]);
+
+  if (!isAuthenticated) {
+    return <AuthDialog onAuthenticated={() => setIsAuthenticated(true)} />;
+  }
 
   useEffect(() => {
     const fetchAllowedEmails = async () => {
