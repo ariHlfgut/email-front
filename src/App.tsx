@@ -96,7 +96,7 @@ function App() {
   useEffect(() => {
     const fetchAllowedEmails = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/api/allowed-emails');
+        const response = await axios.get('https://email-sender-ikqf.onrender.com/api/allowed-emails');
         setAllowedEmails(response.data);
       } catch (error) {
         console.error('Failed to fetch allowed emails:', error);
@@ -109,7 +109,7 @@ function App() {
   const updateServerEmails = async (newEmails: string[]) => {
     try {
       console.log('Sending update to server:', newEmails);
-      const response = await axios.post('http://localhost:3000/api/update-allowed-emails', {
+      const response = await axios.post('https://email-sender-ikqf.onrender.com/api/update-allowed-emails', {
         emails: newEmails
       });
       console.log('Server response:', response.data);

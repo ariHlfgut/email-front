@@ -203,7 +203,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
         formDataToSend.append('files', file);
       });
 
-      const response = await axios.post('http://localhost:3000/api/send-email', formDataToSend, {
+      const response = await axios.post('https://email-sender-ikqf.onrender.com/api/send-email', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
