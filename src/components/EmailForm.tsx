@@ -8,18 +8,14 @@ import {
   MenuItem, 
   Paper,
   Typography,
-  Alert,
-  Snackbar,
   SelectChangeEvent,
   InputAdornment,
-  Divider,
   Box,
   IconButton,
   List,
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  Chip,
   CircularProgress,
   Backdrop,
   Fade
@@ -28,7 +24,6 @@ import SendIcon from '@mui/icons-material/Send';
 import SearchIcon from '@mui/icons-material/Search';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import DeleteIcon from '@mui/icons-material/Delete';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import axios from 'axios';
 import { keyframes } from '@mui/system';
 
@@ -38,12 +33,6 @@ interface FormData {
   subject: string;
   message: string;
   attachments: File[];
-}
-
-interface AlertState {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error';
 }
 
 interface EmailFormProps {
@@ -246,7 +235,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       <Typography variant="h6" gutterBottom align="center" color="primary">
         שליחת מייל חדש
       </Typography>
-      <Divider sx={{ mb: 3 }} />
+      {/* <Divider sx={{ mb: 3 }} /> */}
 
       <form onSubmit={handleSubmit}>
         <FormControl fullWidth sx={{ mb: 2 }}>

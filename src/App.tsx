@@ -7,8 +7,6 @@ import {
   Container, 
   Paper,
   Typography,
-  Divider,
-  useMediaQuery
 } from '@mui/material';
 import { 
   Settings as SettingsIcon,
@@ -28,18 +26,6 @@ const fadeIn = keyframes`
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-`;
-
-const pulse = keyframes`
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
   }
 `;
 
@@ -106,7 +92,6 @@ const domain = '0541234.com';  // הדומיין הקבוע
 
 function App() {
   const [allowedEmails, setAllowedEmails] = useState<string[]>(['ari', 'aly', 'support']);
-  const isMobile = useMediaQuery(rtlTheme.breakpoints.down('md'));
 
   useEffect(() => {
     const fetchAllowedEmails = async () => {
