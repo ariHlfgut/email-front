@@ -17,6 +17,7 @@ import PrefixManager from './components/PrefixManager';
 import axios from 'axios';
 import { keyframes } from '@mui/system';
 import { AuthDialog } from './components/AuthDialog';
+import config from './config';
 
 // אנימציות
 const fadeIn = keyframes`
@@ -89,12 +90,14 @@ const rtlTheme = createTheme({
   }
 });
 
-const domain = '0541234.com';  // הדומיין הקבוע
+const domain = '0541234.com';
+const API_URL = config.API_URL;
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [allowedEmails, setAllowedEmails] = useState<string[]>([]);
 
+  // בדיקת אימות בטעינה
   useEffect(() => {
     const token = localStorage.getItem('auth-token');
     const timestamp = localStorage.getItem('auth-timestamp');
@@ -103,47 +106,42 @@ function App() {
       const lastAuth = new Date(timestamp);
       const now = new Date();
       
-      // בדיקה אם עבר יום מהאימות האחרון
       if (lastAuth.getDate() === now.getDate() && 
           lastAuth.getMonth() === now.getMonth() && 
           lastAuth.getFullYear() === now.getFullYear()) {
         setIsAuthenticated(true);
+        axios.defaults.headers.common['x-auth-token'] = token;
       } else {
         localStorage.removeItem('auth-token');
         localStorage.removeItem('auth-timestamp');
       }
     }
-  }, []);
+  }, []); // רק בטעינה ראשונית
 
-  // עדכון ה-axios להוסיף את הטוקן לכל בקשה
+  // טעינת אימיילים מורשים רק כשהמשתמש מאומת
   useEffect(() => {
-    const token = localStorage.getItem('auth-token');
-    if (token) {
-      axios.defaults.headers.common['x-auth-token'] = token;
+    if (isAuthenticated) {
+      const fetchAllowedEmails = async () => {
+        try {
+          const response = await axios.get(`${API_URL}/api/allowed-emails`);
+          setAllowedEmails(response.data);
+        } catch (error) {
+          console.error('Failed to fetch allowed emails:', error);
+        }
+      };
+
+      fetchAllowedEmails();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated]); // תלוי רק במצב האימות
 
   if (!isAuthenticated) {
     return <AuthDialog onAuthenticated={() => setIsAuthenticated(true)} />;
   }
 
-  useEffect(() => {
-    const fetchAllowedEmails = async () => {
-      try {
-        const response = await axios.get('https://email-sender-ikqf.onrender.com/api/allowed-emails');
-        setAllowedEmails(response.data);
-      } catch (error) {
-        console.error('Failed to fetch allowed emails:', error);
-      }
-    };
-
-    fetchAllowedEmails();
-  }, []);
-
   const updateServerEmails = async (newEmails: string[]) => {
     try {
       console.log('Sending update to server:', newEmails);
-      const response = await axios.post('https://email-sender-ikqf.onrender.com/api/update-allowed-emails', {
+      const response = await axios.post(`${API_URL}/api/update-allowed-emails`, {
         emails: newEmails
       });
       console.log('Server response:', response.data);
