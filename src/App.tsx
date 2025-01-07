@@ -17,6 +17,7 @@ import PrefixManager from './components/PrefixManager';
 import axios from 'axios';
 import { keyframes } from '@mui/system';
 import { AuthDialog } from './components/AuthDialog';
+import config from './config';
 
 // אנימציות
 const fadeIn = keyframes`
@@ -89,7 +90,8 @@ const rtlTheme = createTheme({
   }
 });
 
-const domain = '0541234.com';  // הדומיין הקבוע
+const domain = '0541234.com';
+const API_URL = config.API_URL;
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -121,7 +123,7 @@ function App() {
     if (isAuthenticated) {
       const fetchAllowedEmails = async () => {
         try {
-          const response = await axios.get('http://localhost:3000/api/allowed-emails');
+          const response = await axios.get(`${API_URL}/api/allowed-emails`);
           setAllowedEmails(response.data);
         } catch (error) {
           console.error('Failed to fetch allowed emails:', error);
@@ -139,7 +141,7 @@ function App() {
   const updateServerEmails = async (newEmails: string[]) => {
     try {
       console.log('Sending update to server:', newEmails);
-      const response = await axios.post('http://localhost:3000/api/update-allowed-emails', {
+      const response = await axios.post(`${API_URL}/api/update-allowed-emails`, {
         emails: newEmails
       });
       console.log('Server response:', response.data);

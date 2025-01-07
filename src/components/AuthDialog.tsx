@@ -11,10 +11,13 @@ import {
   CircularProgress
 } from '@mui/material';
 import axios from 'axios';
+import config from '../config';
 
 interface AuthDialogProps {
   onAuthenticated: () => void;
 }
+
+const API_URL = config.API_URL;
 
 export const AuthDialog = ({ onAuthenticated }: AuthDialogProps) => {
   const [code, setCode] = useState('');
@@ -27,7 +30,7 @@ export const AuthDialog = ({ onAuthenticated }: AuthDialogProps) => {
     setError('');
     
     try {
-      const response = await axios.post('http://localhost:3000/api/verify-code', 
+      const response = await axios.post(`${API_URL}/api/verify-code`, 
         { code },
         {
           headers: {

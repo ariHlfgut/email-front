@@ -27,6 +27,7 @@ import AttachFileIcon from '@mui/icons-material/AttachFile';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 import { keyframes } from '@mui/system';
+import config from '../config';
 
 interface FormData {
   from: string;
@@ -111,6 +112,8 @@ const sendingAnimation = keyframes`
   50% { transform: scale(0.95); }
   100% { transform: scale(1); }
 `;
+
+const API_URL = config.API_URL;
 
 const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
   const theme = useTheme();
@@ -205,7 +208,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
         formDataToSend.append('files', file);
       });
 
-      const response = await axios.post('http://localhost:3000/api/send-email', formDataToSend, {
+      const response = await axios.post(`${API_URL}/api/send-email`, formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
