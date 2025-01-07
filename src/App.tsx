@@ -1,35 +1,24 @@
 import { useState, useEffect } from 'react';
-import { 
-  ThemeProvider, 
-  createTheme, 
-  CssBaseline, 
-  Box, 
-  Container, 
+import {
+  ThemeProvider,
+  createTheme,
+  CssBaseline,
+  Box,
   Paper,
   Typography,
+  alpha,
 } from '@mui/material';
-import { 
-  Settings as SettingsIcon,
+import {
   Mail as MailIcon,
 } from '@mui/icons-material';
 import EmailForm from './components/EmailForm';
 import PrefixManager from './components/PrefixManager';
 import axios from 'axios';
-import { keyframes } from '@mui/system';
 import { AuthDialog } from './components/AuthDialog';
 import config from './config';
+import { Navigation } from './components/Navigation';
 
 // אנימציות
-const fadeIn = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`;
 
 const rtlTheme = createTheme({
   direction: 'rtl',
@@ -41,15 +30,15 @@ const rtlTheme = createTheme({
   },
   palette: {
     primary: {
-      main: '#2196f3',
-      light: '#64b5f6',
-      dark: '#1976d2'
+      main: '#3f51b5',
+      light: '#757de8',
+      dark: '#002984'
     },
     secondary: {
       main: '#f50057'
     },
     background: {
-      default: '#f8faff',
+      default: '#f5f5f5',
       paper: '#ffffff'
     }
   },
@@ -95,34 +84,39 @@ const API_URL = config.API_URL;
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [username, setUsername] = useState('');
   const [allowedEmails, setAllowedEmails] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState<'email' | 'prefixes'>('email');
 
   // בדיקת אימות בטעינה
   useEffect(() => {
     const token = localStorage.getItem('auth-token');
-    const timestamp = localStorage.getItem('auth-timestamp');
-    
-    if (token && timestamp) {
-      const lastAuth = new Date(timestamp);
-      const now = new Date();
-      
-      if (lastAuth.getDate() === now.getDate() && 
-          lastAuth.getMonth() === now.getMonth() && 
-          lastAuth.getFullYear() === now.getFullYear()) {
-        setIsAuthenticated(true);
+    const savedUsername = localStorage.getItem('user-name');
+
+    if (token && savedUsername) {
+      try {
         axios.defaults.headers.common['x-auth-token'] = token;
-      } else {
+        setIsAuthenticated(true);
+        setUsername(savedUsername);
+      } catch (error) {
+        console.error('Invalid token:', error);
         localStorage.removeItem('auth-token');
-        localStorage.removeItem('auth-timestamp');
+        localStorage.removeItem('user-name');
       }
     }
-  }, []); // רק בטעינה ראשונית
+  }, []);
 
   // טעינת אימיילים מורשים רק כשהמשתמש מאומת
   useEffect(() => {
     if (isAuthenticated) {
       const fetchAllowedEmails = async () => {
         try {
+          // וידוא שהטוקן מוגדר בהדרים
+          const token = localStorage.getItem('auth-token');
+          if (token) {
+            axios.defaults.headers.common['x-auth-token'] = token;
+          }
+
           const response = await axios.get(`${API_URL}/api/allowed-emails`);
           setAllowedEmails(response.data);
         } catch (error) {
@@ -135,7 +129,10 @@ function App() {
   }, [isAuthenticated]); // תלוי רק במצב האימות
 
   if (!isAuthenticated) {
-    return <AuthDialog onAuthenticated={() => setIsAuthenticated(true)} />;
+    return <AuthDialog onAuthenticated={(name) => {
+      setIsAuthenticated(true);
+      setUsername(name);
+    }} />;
   }
 
   const updateServerEmails = async (newEmails: string[]) => {
@@ -145,7 +142,7 @@ function App() {
         emails: newEmails
       });
       console.log('Server response:', response.data);
-      
+
       if (response.data.success) {
         return true;
       } else {
@@ -162,7 +159,7 @@ function App() {
     console.log('Adding prefix:', prefix);
     const newEmails = [...allowedEmails, prefix];
     const success = await updateServerEmails(newEmails);
-    
+
     if (success) {
       setAllowedEmails(newEmails);
     }
@@ -172,7 +169,7 @@ function App() {
     console.log('Removing prefix:', prefix);
     const newEmails = allowedEmails.filter(email => email !== prefix);
     const success = await updateServerEmails(newEmails);
-    
+
     if (success) {
       setAllowedEmails(newEmails);
     }
@@ -181,145 +178,150 @@ function App() {
   return (
     <ThemeProvider theme={rtlTheme}>
       <CssBaseline />
-      <Box sx={{ 
-        minHeight: '100vh',
-        minWidth: '100vw',
-        background: 'linear-gradient(135deg, #f8faff 0%, #e3f2fd 100%)',
-        position: 'relative',
-        overflow: 'hidden',
-        pt: { xs: 2, sm: 4, md: 6 },
-        pb: { xs: 4, sm: 6, md: 8 },
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
-        {/* Background Decorations */}
-        <Box sx={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'radial-gradient(circle at 50% 50%, rgba(33,150,243,0.03) 0%, transparent 70%)',
-          pointerEvents: 'none'
-        }} />
 
-        <Container 
-          maxWidth={false}
-          sx={{ 
+      <Box sx={{
+        height: '100vh',
+        width: '100vw',
+        background: 'linear-gradient(135deg, #f5f5f5 0%, #e8eaf6 100%)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}>
+        {/* Header */}
+        <Paper
+          elevation={0}
+          sx={{
+            background: 'linear-gradient(135deg, #3f51b5 0%, #002984 100%)',
+            color: 'white',
+            width: '95%',
+            right: '2.5%',
+            left: '2.5%',
+            top: '1.5%',
             position: 'relative',
-            width: '100%',
-            height: '100%',
-            px: { xs: 2, sm: 3, md: 4, lg: 5 },
-            flex: 1
+            mb: 5
           }}
         >
-          {/* Header */}
-          <Paper 
-            elevation={0} 
-            sx={{ 
-              p: { xs: 3, sm: 4, md: 5 },
-              mb: { xs: 3, sm: 4, md: 5 },
-              background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
-              color: 'white',
-              borderRadius: '24px',
-              width: '100%',
-              animation: `${fadeIn} 1s ease-out`,
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-          >
-            <Typography variant="h4" align="center" gutterBottom>
-              מערכת שליחת מיילים
-            </Typography>
-            <Typography variant="subtitle1" align="center">
-              ניהול ושליחת מיילים מדומיין {domain}
-            </Typography>
-          </Paper>
 
-          {/* Main Content Grid */}
-          <Box sx={{ 
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              lg: 'repeat(2, 1fr)',
-            },
-            gap: { xs: 3, sm: 4, md: 5 },
+          <Box sx={{
+            maxWidth: '900px',
+            margin: '0 auto',
+            height: '4rem',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-around',
             width: '100%',
-            height: '100%',
-            '& > *': {
-              minHeight: '500px',
-              height: '100%'
-            }
           }}>
-            {/* Prefix Manager */}
-            <Paper 
-              elevation={3} 
-              sx={{ 
-                p: 4,
-                height: '100%',
-                borderRadius: '16px',
-                transition: 'all 0.2s ease',
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3,
+              flex: 1
+            }}>
+              <Box sx={{
                 display: 'flex',
-                flexDirection: 'column',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 5px 15px rgba(0,0,0,0.1)'
-                }
-              }}
-            >
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 2, 
-                mb: 3 
+                alignItems: 'center',
+                gap: 2
               }}>
-                <SettingsIcon color="primary" sx={{ fontSize: 28 }} />
-                <Typography variant="h6" color="primary">
-                  ניהול קידומות מייל
+                <MailIcon sx={{ fontSize: 24 }} />
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontSize: '1.7rem',
+                    fontWeight: 750
+                  }}
+                >
+                  מערכת שליחת מיילים
                 </Typography>
               </Box>
+
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2
+              }}>
+                <Typography sx={{ fontSize: '1.2rem', fontWeight: 500 }}>
+                  {domain}
+                </Typography>
+                <Typography sx={{ fontSize: '1.2rem', fontWeight: 500 }}>
+                  שלום {username}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box sx={{
+              background: `linear-gradient(45deg, ${rtlTheme.palette.primary.dark} 30%, ${rtlTheme.palette.primary.main} 90%)`,
+              color: 'white',
+              px: 1.5,
+              py: 0.5,
+              borderRadius: '20px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              border: '1px solid',
+              borderColor: alpha(rtlTheme.palette.primary.light, 0.3),
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              position: 'absolute',
+              right: 'calc(100% + 20rem)'
+            }}>
+              <span style={{ fontSize: '0.8em', marginRight: '2px' }}>⭐</span>
+              משתמש פרו
+            </Box>
+          </Box>
+        </Paper>
+
+        {/* Main Content */}
+        <Box sx={{
+          px: 2,
+          pb: 2,
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          maxWidth: '900px',
+          mx: 'auto',
+          width: '100%',
+          height: 'calc(100vh - 150px)'
+        }}>
+          <Navigation
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+          />
+
+
+          <Box sx={{
+            flex: 1,
+            overflow: 'auto',
+            '& > *': {
+              maxWidth: '800px',
+              margin: '0 auto',
+              minHeight: '50rem'
+            }
+          }}>
+            {currentPage === 'email' ? (
+              <EmailForm
+                allowedEmails={allowedEmails}
+                domain={domain}
+              />
+            ) : (
               <PrefixManager
                 allowedEmails={allowedEmails}
                 domain={domain}
                 onPrefixAdd={handleAddPrefix}
                 onPrefixRemove={handleRemovePrefix}
               />
-            </Paper>
-
-            {/* Email Form */}
-            <Paper 
-              elevation={3} 
-              sx={{ 
-                p: 4,
-                height: '100%',
-                borderRadius: '16px',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                flexDirection: 'column',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 5px 15px rgba(0,0,0,0.1)'
-                }
-              }}
-            >
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 2, 
-                mb: 3 
-              }}>
-                <MailIcon color="primary" sx={{ fontSize: 28 }} />
-                <Typography variant="h6" color="primary">
-                  שליחת מייל חדש
-                </Typography>
-              </Box>
-              <EmailForm
-                allowedEmails={allowedEmails}
-                domain={domain}
-              />
-            </Paper>
+            )}
           </Box>
-        </Container>
+        </Box>
       </Box>
     </ThemeProvider>
   );
