@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -27,11 +27,19 @@ export const AuthDialog = ({ onAuthenticated }: AuthDialogProps) => {
     setError('');
     
     try {
-      const response = await axios.post('https://email-sender-ikqf.onrender.com/api/verify-code', { code });
+      const response = await axios.post('http://localhost:3000/api/verify-code', 
+        { code },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
       
       if (response.data.success) {
         localStorage.setItem('auth-token', response.data.token);
         localStorage.setItem('auth-timestamp', new Date().toISOString());
+        axios.defaults.headers.common['x-auth-token'] = response.data.token;
         onAuthenticated();
       }
     } catch (error) {

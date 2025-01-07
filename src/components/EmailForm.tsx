@@ -15,10 +15,11 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
   CircularProgress,
   Backdrop,
-  Fade
+  Fade,
+  alpha,
+  useTheme
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import SearchIcon from '@mui/icons-material/Search';
@@ -112,6 +113,7 @@ const sendingAnimation = keyframes`
 `;
 
 const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
+  const theme = useTheme();
   const [formData, setFormData] = useState<FormData>({
     from: '',
     to: '',
@@ -203,7 +205,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
         formDataToSend.append('files', file);
       });
 
-      const response = await axios.post('https://email-sender-ikqf.onrender.com/api/send-email', formDataToSend, {
+      const response = await axios.post('http://localhost:3000/api/send-email', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -230,6 +232,33 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
     }
   };
 
+  const inputStyles = {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: '12px',
+      transition: 'all 0.2s ease-in-out',
+      backgroundColor: alpha(theme.palette.background.paper, 0.8),
+      backdropFilter: 'blur(8px)',
+      '&:hover': {
+        backgroundColor: alpha(theme.palette.background.paper, 0.95),
+        boxShadow: `0 0 0 1px ${alpha(theme.palette.primary.main, 0.2)}`
+      },
+      '&.Mui-focused': {
+        backgroundColor: theme.palette.background.paper,
+        boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.3)}`
+      }
+    },
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderColor: alpha(theme.palette.divider, 0.8),
+      transition: 'all 0.2s ease-in-out'
+    },
+    '& .MuiInputLabel-root': {
+      transition: 'all 0.2s ease-in-out',
+      '&.Mui-focused': {
+        color: theme.palette.primary.main
+      }
+    }
+  };
+
   return (
     <Paper elevation={3} sx={{ p: 3, position: 'relative' }}>
       <Typography variant="h6" gutterBottom align="center" color="primary">
@@ -238,7 +267,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       {/* <Divider sx={{ mb: 3 }} /> */}
 
       <form onSubmit={handleSubmit}>
-        <FormControl fullWidth sx={{ mb: 2 }}>
+        <FormControl fullWidth sx={{ mb: 2, ...inputStyles }}>
           <InputLabel>שולח</InputLabel>
           <Select
             name="from"
@@ -253,7 +282,10 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
             MenuProps={{
               PaperProps: {
                 sx: {
-                  maxHeight: 300
+                  maxHeight: 300,
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                  mt: 1
                 }
               }
             }}
@@ -340,7 +372,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
           value={formData.to}
           onChange={handleChange}
           required
-          sx={{ mb: 2 }}
+          sx={{ mb: 2, ...inputStyles }}
         />
 
         <TextField
@@ -350,7 +382,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
           value={formData.subject}
           onChange={handleChange}
           required
-          sx={{ mb: 2 }}
+          sx={{ mb: 2, ...inputStyles }}
         />
 
         <TextField
@@ -362,7 +394,14 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
           value={formData.message}
           onChange={handleChange}
           required
-          sx={{ mb: 3 }}
+          sx={{ 
+            mb: 3,
+            ...inputStyles,
+            '& .MuiOutlinedInput-root': {
+              ...inputStyles['& .MuiOutlinedInput-root'],
+              minHeight: '120px'
+            }
+          }}
         />
 
         <Box sx={{ mb: 3 }}>
@@ -379,7 +418,19 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
               component="span"
               variant="outlined"
               startIcon={<AttachFileIcon />}
-              sx={{ mb: 2 }}
+              sx={{ 
+                mb: 2,
+                borderRadius: '12px',
+                borderWidth: '1.5px',
+                textTransform: 'none',
+                fontSize: '1rem',
+                py: 1,
+                px: 3,
+                '&:hover': {
+                  borderWidth: '1.5px',
+                  backgroundColor: alpha(theme.palette.primary.main, 0.04)
+                }
+              }}
             >
               צרף קבצים (עד 100MB לקובץ)
             </Button>
@@ -394,6 +445,16 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                     bgcolor: file.size > MAX_FILE_SIZE ? 'error.light' : 'transparent',
                     borderRadius: 1
                   }}
+                  secondaryAction={
+                    <IconButton
+                      edge="end"
+                      onClick={() => handleRemoveFile(index)}
+                      size="small"
+                      color={file.size > MAX_FILE_SIZE ? 'error' : 'default'}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  }
                 >
                   <ListItemText
                     primary={file.name}
@@ -407,16 +468,6 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                       </Typography>
                     }
                   />
-                  <ListItemSecondaryAction>
-                    <IconButton
-                      edge="end"
-                      onClick={() => handleRemoveFile(index)}
-                      size="small"
-                      color={file.size > MAX_FILE_SIZE ? 'error' : 'default'}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </ListItemSecondaryAction>
                 </ListItem>
               ))}
             </List>
@@ -445,6 +496,20 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
             animation: isSending ? `${sendingAnimation} 2s ease-in-out infinite` : 'none',
             transition: 'all 0.3s ease',
             position: 'relative',
+            borderRadius: '12px',
+            py: 1.5,
+            fontSize: '1.1rem',
+            fontWeight: 600,
+            textTransform: 'none',
+            boxShadow: 'none',
+            '&:hover': {
+              boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.2)}`,
+              transform: 'translateY(-1px)'
+            },
+            '&:active': {
+              transform: 'translateY(0)',
+              boxShadow: `0 4px 8px ${alpha(theme.palette.primary.main, 0.2)}`
+            },
             '&:disabled': {
               bgcolor: 'primary.main',
               color: 'white',
