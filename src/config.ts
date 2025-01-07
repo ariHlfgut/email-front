@@ -10,7 +10,7 @@ function getApiUrl(): string {
   }
   
   // בדיקה אם אנחנו בפרודקשן
-  if (process.env.NODE_ENV === 'production') {
+  if (import.meta.env?.MODE === 'production') {
     return 'https://email-sender-ikqf.onrender.com';
   }
   
@@ -22,7 +22,7 @@ const config: Config = {
   API_URL: getApiUrl()
 };
 
-console.log('Current environment:', process.env.NODE_ENV);
+console.log('Current environment:', import.meta.env?.MODE);
 console.log('Current hostname:', window.location.hostname);
 console.log('Using API URL:', config.API_URL);
 
