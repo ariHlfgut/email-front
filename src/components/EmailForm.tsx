@@ -104,7 +104,34 @@ const HighlightedText = ({ text, highlight }: { text: string; highlight: string 
   );
 };
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB in bytes
+// הגדרת סוגי קבים מותרים
+const ALLOWED_MIME_TYPES = [
+  // קבצי מסמכ
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+  
+  // תמונות
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  
+  // קבצי קול
+  'audio/mpeg',
+  'audio/wav',
+  'audio/ogg',
+  'audio/mp3',
+  'audio/mp4',
+  'audio/webm',
+  
+  // קבצי וידאו
+  'video/mp4',
+  'video/webm',
+  'video/quicktime'
+];
+
+const MAX_FILE_SIZE = 7.5 * 1024 * 1024; // 7.5MB in bytes
 const MAX_FILES = 10;
 
 // אנימציה לכפתור
@@ -165,14 +192,35 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       return;
     }
 
-    // בדיקת גודל כל קובץ
+    // בדיקת גודל כל של כל הקבצים
+    const totalSize = files.reduce((sum, file) => sum + file.size, 0) + 
+      formData.attachments.reduce((sum, file) => sum + file.size, 0);
+    
+    if (totalSize > MAX_FILE_SIZE) {
+      setError(
+        `הגודל הכולל של הקבצים (${(totalSize / 1024 / 1024).toFixed(1)}MB) ` +
+        `חורג מהמגבלה המותרת (7.5MB)`
+      );
+      return;
+    }
+
+    //בדקת גודל הקבצים הבודדים
     const oversizedFiles = files.filter(file => file.size > MAX_FILE_SIZE);
     if (oversizedFiles.length > 0) {
       setError(
-        `הקבצים הבאים חורגים מהגודל המקסימלי (100MB):\n` +
+        `הקבצים הבאים חורגים מהגודל המקסימלי (7.5MB):\n` +
         oversizedFiles.map(file => 
           `${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`
         ).join('\n')
+      );
+      return;
+    }
+
+    // בדקת גיסוג הקובץ
+    const invalidFiles = files.filter(file => !ALLOWED_MIME_TYPES.includes(file.type));
+    if (invalidFiles.length > 0) {
+      setError(
+        `סוג הקובץ אינו נתמך:\n${invalidFiles.map(f => f.name).join('\n')}`
       );
       return;
     }
@@ -251,12 +299,12 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       '& fieldset': {
         borderWidth: '1px !important',
         '& legend': {
-          marginRight: '2px',
+          marginRight: '-10px',
           textAlign: 'right',
           width: 'auto',
           height: '11px',
           '& span': {
-            padding: '0 4px',
+            padding: '0 1.5px',
             backgroundColor: theme.palette.background.paper
           }
         }
@@ -267,7 +315,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       transition: 'all 0.2s ease-in-out'
     },
     '& .MuiInputLabel-root': {
-      right: '14px',
+      right: '25px',
       left: 'auto',
       transformOrigin: 'right',
       transition: 'all 0.2s ease-in-out',
@@ -276,7 +324,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       },
       '&.MuiInputLabel-shrink': {
         transform: 'translate(0, -9px) scale(0.75)',
-        right: '14px'
+        right: '0px'
       }
     },
     '& .MuiInputBase-input': {
@@ -365,11 +413,11 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
           gap: 2.5,
           flex: 1
         }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column',  }}>
             <FormControl fullWidth sx={{ mb: 2, ...inputStyles }}>
-              <InputLabel sx={{ right: '14px', left: 'auto', transformOrigin: 'right' }}>
+            <Typography sx={{direction: 'rtl'}}>
                 שולח
-              </InputLabel>
+            </Typography>
               <Select
                 name="from"
                 value={formData.from}
@@ -412,7 +460,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                           <InputAdornment position="start">
                             <SearchIcon />
                           </InputAdornment>
-                        ),
+                        )
                       }}
                       sx={{
                         '& .MuiOutlinedInput-notchedOutline': {
@@ -528,89 +576,71 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
             />
 
             <Box sx={{ mb: 0.5 }}>
-              <input
-                type="file"
-                multiple
-                id="file-upload"
-                style={{ display: 'none' }}
-                onChange={handleFileChange}
-                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+              <Button
+                component="label"
+                variant="outlined"
+                startIcon={<AttachFileIcon />}
+                sx={{ mt: 2 }}
+              >
+                צרף קבצים (עד 7.5 MB לקובץ)
+                <input
+                  type="file"
+                  multiple
+                  hidden
+                  onChange={handleFileChange}
+                  accept={ALLOWED_MIME_TYPES.join(',')}
+                />
+              </Button>
 
-              />
-              <Box sx={{ 
-                maxWidth: '38%',
-                display: 'flex', 
-                flexDirection: 'column',
-                gap: 1
-              }}>
-                <label htmlFor="file-upload">
-                  <Button
-                    component="span"
-                    variant="outlined"
-                    startIcon={<AttachFileIcon />}
-                    sx={{ 
-                      borderRadius: '12px',
-                      borderWidth: '1.5px',
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      py: 1,
-                      px: 3
-                    }}
-                  >
-                    צרף קבצים (עד 100MB לקובץ)
-                  </Button>
-                </label>
-
-                {error && (
-                  <Typography 
-                    color="error" 
-                    variant="body2" 
-                    sx={{ 
-                      whiteSpace: 'pre-line',
-                      bgcolor: 'error.light',
-                      color: 'error.contrastText',
-                      p: 1,
-                      borderRadius: 1,
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    {error}
-                  </Typography>
-                )}
-              </Box>
-
-              {formData.attachments.length > 0 && (
-                <Paper 
-                  variant="outlined" 
+              {error && (
+                <Typography 
+                  color="error" 
+                  variant="body2" 
                   sx={{ 
-                    maxHeight: '78px',
-                    overflow: 'auto',
-                    mt: 1
+                    whiteSpace: 'pre-line',
+                    bgcolor: 'error.light',
+                    color: 'error.contrastText',
+                    p: 1,
+                    borderRadius: 1,
+                    fontSize: '0.875rem'
                   }}
                 >
-                  <List dense >
-                    {formData.attachments.map((file, index) => (
-                      <ListItem 
-                        key={index}
-                        secondaryAction={
-                          <IconButton edge="end" onClick={() => handleRemoveFile(index)}>
-                            <DeleteIcon />
-                          </IconButton>
-                        }
-                      >
-                        <ListItemIcon>
-                          <AttachFileIcon />
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary={file.name}
-                          secondary={`${(file.size / 1024 / 1024).toFixed(2)} MB`}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Paper>
+                  {error}
+                </Typography>
               )}
             </Box>
+
+            {formData.attachments.length > 0 && (
+              <Paper 
+                variant="outlined" 
+                sx={{ 
+                  maxHeight: '78px',
+                  overflow: 'auto',
+                  mt: 1
+                }}
+              >
+                <List dense >
+                  {formData.attachments.map((file, index) => (
+                    <ListItem 
+                      key={index}
+                      secondaryAction={
+                        <IconButton edge="end" onClick={() => handleRemoveFile(index)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      }
+                    >
+                      <ListItemIcon>
+                        <AttachFileIcon />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={file.name}
+                        secondary={`${(file.size / 1024 / 1024).toFixed(2)} MB`}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </Paper>
+            )}
           </Box>
 
           <Box sx={{ 
