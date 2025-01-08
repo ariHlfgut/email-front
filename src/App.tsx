@@ -7,9 +7,14 @@ import {
   Paper,
   Typography,
   alpha,
+  TextField,
+  InputAdornment,
+  IconButton,
 } from '@mui/material';
 import {
   Mail as MailIcon,
+  Visibility,
+  VisibilityOff,
 } from '@mui/icons-material';
 import EmailForm from './components/EmailForm';
 import PrefixManager from './components/PrefixManager';
@@ -87,6 +92,8 @@ function App() {
   const [username, setUsername] = useState('');
   const [allowedEmails, setAllowedEmails] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<'email' | 'prefixes'>('email');
+  const [code, setCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // בדיקת אימות בטעינה
   useEffect(() => {

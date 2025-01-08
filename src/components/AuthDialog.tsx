@@ -9,10 +9,12 @@ import {
   Typography,
   Box,
   CircularProgress,
-  InputAdornment
+  InputAdornment,
+  IconButton
 } from '@mui/material';
 import axios from 'axios';
 import config from '../config';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 
 interface AuthDialogProps {
   onAuthenticated: (username: string) => void;
@@ -24,6 +26,7 @@ const BASE_PASSWORD = 'TUOTBHJUNV';
 export const AuthDialog = ({ onAuthenticated }: AuthDialogProps) => {
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
@@ -102,7 +105,18 @@ export const AuthDialog = ({ onAuthenticated }: AuthDialogProps) => {
                   </Typography>
                 </InputAdornment>
               ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setShowPassword(!showPassword)}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
             }}
+            type={showPassword ? 'text' : 'password'}
           />
         </Box>
       </DialogContent>
