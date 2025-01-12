@@ -653,7 +653,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
             <Button 
               type="submit" 
               variant="contained" 
-              endIcon={isSending ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+              endIcon={successMessage ? <></> : isSending ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
               fullWidth
               size="large"
               disabled={isSending}
@@ -682,7 +682,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                 }
               }}
             >
-              {isSending ? 'שולח...' : 'שלח מייל'}
+              {successMessage ? successMessage : isSending ? 'שולח...' : 'שלח מייל'}
             </Button>
           </Box>
         </Box>
@@ -712,26 +712,6 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
           </Fade>
         </Box>
       </Backdrop>
-
-      {successMessage && (
-        <Typography
-          sx={{
-            position: 'absolute',
-            bottom: '24px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            bgcolor: 'background.paper',
-            color: 'text.primary',
-            py: 1,
-            px: 3,
-            borderRadius: 2,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            zIndex: 1400
-          }}
-        >
-          {successMessage}
-        </Typography>
-      )}
     </Paper>
   );
 };
