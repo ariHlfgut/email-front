@@ -10,22 +10,38 @@ import {
   Typography,
   Box,
   Alert,
-  useTheme
+  useTheme,
+  CircularProgress,
+  Backdrop
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { alpha } from '@mui/material/styles';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import * as XLSX from 'xlsx';
+import axios from 'axios';
+import config from '../config';
+
+const API_URL = config.API_URL;
 
 interface PrefixManagerProps {
   allowedEmails: string[];
   domain: string;
-  onPrefixAdd: (prefix: string) => void;
-  onPrefixRemove: (prefix: string) => void;
+  onPrefixAdd: (prefix: string) => Promise<void>;
+  onPrefixRemove: (prefix: string) => Promise<void>;
+  setAllowedEmails: (emails: string[]) => void;
 }
 
-const PrefixManager = ({ allowedEmails, domain, onPrefixAdd, onPrefixRemove }: PrefixManagerProps) => {
+const PrefixManager = ({ 
+  allowedEmails, 
+  domain, 
+  onPrefixAdd, 
+  onPrefixRemove,
+  setAllowedEmails 
+}: PrefixManagerProps) => {
   const [newPrefix, setNewPrefix] = useState('');
   const [error, setError] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const theme = useTheme();
 
   const validatePrefix = (prefix: string): boolean => {
@@ -75,6 +91,50 @@ const PrefixManager = ({ allowedEmails, domain, onPrefixAdd, onPrefixRemove }: P
       setError('ניתן להשתמש רק באותיות באנגלית ומספרים');
     } else {
       setError('');
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setError('');
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+        
+        const rawData: unknown[] = jsonData.flat();
+        const prefixes = rawData
+          .filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+          .map(prefix => prefix.trim());
+
+        try {
+          const response = await axios.post(`${API_URL}/api/update-allowed-emails-bulk`, {
+            prefixes
+          });
+          
+          if (response.data.success) {
+            setError('');
+            setAllowedEmails(response.data.prefixes);
+          }
+        } catch (error: any) {
+          setError(error.response?.data?.error || 'שגיאה בהעלאת הקידומות');
+        }
+      };
+      
+      reader.readAsArrayBuffer(file);
+    } catch (error) {
+      setError('שגיאה בקריאת הקובץ');
+      console.error('Error reading Excel file:', error);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -295,6 +355,57 @@ const PrefixManager = ({ allowedEmails, domain, onPrefixAdd, onPrefixRemove }: P
           )}
         </Box>
       </Box>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Button
+          variant="outlined"
+          startIcon={
+            isUploading ? <CircularProgress size={20} /> : <UploadFileIcon />
+          }
+          component="label"
+          disabled={isUploading}
+        >
+          {isUploading ? 'מעלה...' : 'העלאה מאקסל'}
+          <input
+            type="file"
+            hidden
+            accept=".xlsx,.xls"
+            onChange={handleFileUpload}
+            disabled={isUploading}
+          />
+        </Button>
+        <Typography variant="caption" color="textSecondary">
+          (קובץ אקסל עם קידומות בעמודה הראשונה)
+        </Typography>
+      </Box>
+
+      <Backdrop
+        sx={{ 
+          color: '#fff',
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          position: 'absolute',
+          borderRadius: '16px'
+        }}
+        open={isUploading}
+      >
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center',
+          gap: 2 
+        }}>
+          <CircularProgress color="inherit" />
+          <Typography>
+            מעלה קידומות...
+          </Typography>
+        </Box>
+      </Backdrop>
+
+      {error && (
+        <Typography color="error" sx={{ mt: 1 }}>
+          {error}
+        </Typography>
+      )}
     </Paper>
   );
 };
