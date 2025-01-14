@@ -21,7 +21,6 @@ interface AuthDialogProps {
 }
 
 const API_URL = config.API_URL;
-const BASE_PASSWORD = 'TUOTBHJUNV';
 
 export const AuthDialog = ({ onAuthenticated }: AuthDialogProps) => {
   const [phone, setPhone] = useState('');
@@ -38,7 +37,7 @@ export const AuthDialog = ({ onAuthenticated }: AuthDialogProps) => {
     try {
       const response = await axios.post(`${API_URL}/api/verify-code`, 
         { 
-          code: BASE_PASSWORD + phone,
+          code: code + phone,
           phone 
         },
         {
@@ -50,7 +49,6 @@ export const AuthDialog = ({ onAuthenticated }: AuthDialogProps) => {
       
       if (response.data.success) {
         localStorage.setItem('auth-token', response.data.token);
-        localStorage.setItem('auth-timestamp', new Date().toISOString());
         localStorage.setItem('user-name', response.data.user.username);
         axios.defaults.headers.common['x-auth-token'] = response.data.token;
         onAuthenticated(response.data.user.username);
