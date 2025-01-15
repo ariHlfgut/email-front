@@ -7,7 +7,6 @@ import {
   MenuItem,
   Paper,
   Typography,
-  SelectChangeEvent,
   InputAdornment,
   Box,
   IconButton,
@@ -19,7 +18,8 @@ import {
   Fade,
   alpha,
   useTheme,
-  ListItemIcon
+  ListItemIcon,
+  SelectChangeEvent
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import SearchIcon from '@mui/icons-material/Search';
@@ -157,6 +157,8 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
   const [isSending, setIsSending] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState('');
+  const [recipientSuggestions, setRecipientSuggestions] = useState<string[]>([]);
+  const [isRecipientSearchOpen, setIsRecipientSearchOpen] = useState(false);
 
   const filteredEmails = allowedEmails.filter(email => {
     const searchLower = searchSender.toLowerCase();
@@ -174,12 +176,15 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
     setIsSearchOpen(false);
   };
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent) => {
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    if ('type' in e.target && name === 'to') {
+      searchRecipients(value);
+    }
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -226,6 +231,43 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
     }));
   };
 
+  const searchRecipients = async (query: string) => {
+    if (query.length < 2) {
+      setRecipientSuggestions([]);
+      setIsRecipientSearchOpen(false);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('auth-token');
+      if (!token) return;
+
+      const response = await axios.get(`${API_URL}/api/recipients/search`, {
+        params: { query },
+        headers: {
+          'x-auth-token': token
+        }
+      });
+      
+      if (response.data.recipients) {
+        setRecipientSuggestions(response.data.recipients);
+        setIsRecipientSearchOpen(true);
+      }
+    } catch (error) {
+      console.error('Error searching recipients:', error);
+    }
+  };
+
+  const handleRecipientSelect = (email: string) => {
+    setFormData(prev => ({ ...prev, to: email }));
+    setIsRecipientSearchOpen(false);
+  };
+
+  const handleRecipientChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+    setFormData(prev => ({ ...prev, to: value }));
+    searchRecipients(value);
+  };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -506,24 +548,70 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
               </Select>
             </FormControl>
 
-            <TextField
-              fullWidth
-              label="נמען"
-              name="to"
-              type="email"
-              value={formData.to}
-              onChange={handleChange}
-              required
-              sx={{
-                mb: 2,
-                ...inputStyles,
-                '& .MuiInputLabel-root': {
-                  right: '14px',
-                  left: 'auto',
-                  transformOrigin: 'right'
-                }
-              }}
-            />
+            <FormControl fullWidth sx={{ mb: 2, position: 'relative' }}>
+              <TextField
+                label="נמען"
+                name="to"
+                type="email"
+                value={formData.to}
+                onChange={handleRecipientChange}
+                required
+                sx={{
+                  ...inputStyles,
+                  '& .MuiInputLabel-root': {
+                    right: '14px',
+                    left: 'auto',
+                    transformOrigin: 'right'
+                  }
+                }}
+              />
+              
+              {isRecipientSearchOpen && recipientSuggestions.length > 0 && (
+                <Paper 
+                  sx={{ 
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    mt: 0.5,
+                    maxHeight: 200,
+                    overflow: 'auto',
+                    zIndex: 1000,
+                    boxShadow: 3
+                  }}
+                >
+                  <List>
+                    {recipientSuggestions.map((email, index) => (
+                      <ListItem
+                        key={index}
+                        component="button"
+                        onClick={() => handleRecipientSelect(email)}
+                        sx={{ 
+                          width: '100%',
+                          textAlign: 'right',
+                          direction: 'rtl',
+                          border: 'none',
+                          background: 'none',
+                          cursor: 'pointer',
+                          '&:hover': {
+                            backgroundColor: 'action.hover'
+                          }
+                        }}
+                      >
+                        <ListItemText 
+                          primary={
+                            <HighlightedText 
+                              text={email} 
+                              highlight={formData.to}
+                            />
+                          } 
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Paper>
+              )}
+            </FormControl>
 
             <TextField
               fullWidth
