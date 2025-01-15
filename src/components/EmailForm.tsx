@@ -1,10 +1,10 @@
 import { useState, ChangeEvent, FormEvent } from 'react';
-import { 
-  TextField, 
-  Button, 
-  FormControl, 
-  Select, 
-  MenuItem, 
+import {
+  TextField,
+  Button,
+  FormControl,
+  Select,
+  MenuItem,
   Paper,
   Typography,
   SelectChangeEvent,
@@ -79,7 +79,7 @@ const HighlightedText = ({ text, highlight }: { text: string; highlight: string 
 
   return (
     <span>
-      {parts.map((part, i) => 
+      {parts.map((part, i) =>
         part.highlight ? (
           <Typography
             key={i}
@@ -110,12 +110,12 @@ const ALLOWED_MIME_TYPES = [
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/plain',
-  
+
   // תמונות
   'image/jpeg',
   'image/png',
   'image/gif',
-  
+
   // קבצי קול
   'audio/mpeg',
   'audio/wav',
@@ -123,14 +123,14 @@ const ALLOWED_MIME_TYPES = [
   'audio/mp3',
   'audio/mp4',
   'audio/webm',
-  
+
   // קבצי וידאו
   'video/mp4',
   'video/webm',
   'video/quicktime'
 ];
 
-const MAX_FILE_SIZE = 7.5 * 1024 * 1024; // 7.5MB in bytes
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB - מגבלה חדשה לקבצים גדולים
 const MAX_FILES = 10;
 
 // אנימציה לכפתור
@@ -151,7 +151,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
     message: '',
     attachments: []
   });
-  
+
   const [searchSender, setSearchSender] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -184,38 +184,26 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
+
     // בדיקת מספר קבצים
     if (formData.attachments.length + files.length > MAX_FILES) {
       setError(`לא ניתן להעלות יותר מ-${MAX_FILES} קבצים`);
       return;
     }
 
-    // בדיקת גודל כל של כל הקבצים
-    const totalSize = files.reduce((sum, file) => sum + file.size, 0) + 
-      formData.attachments.reduce((sum, file) => sum + file.size, 0);
-    
-    if (totalSize > MAX_FILE_SIZE) {
-      setError(
-        `הגודל הכולל של הקבצים (${(totalSize / 1024 / 1024).toFixed(1)}MB) ` +
-        `חורג מהמגבלה המותרת (7.5MB)`
-      );
-      return;
-    }
-
-    //בדקת גודל הקבצים הבודדים
+    // בדיקת גודל מקסימלי לכל קובץ
     const oversizedFiles = files.filter(file => file.size > MAX_FILE_SIZE);
     if (oversizedFiles.length > 0) {
       setError(
-        `הקבצים הבאים חורגים מהגודל המקסימלי (7.5MB):\n` +
-        oversizedFiles.map(file => 
+        `הקבצים הבאים חורגים מהגודל המקסימלי (100MB):\n` +
+        oversizedFiles.map(file =>
           `${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`
         ).join('\n')
       );
       return;
     }
 
-    // בדקת גיסוג הקובץ
+    // בדיקת סוג הקובץ
     const invalidFiles = files.filter(file => !ALLOWED_MIME_TYPES.includes(file.type));
     if (invalidFiles.length > 0) {
       setError(
@@ -238,7 +226,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
     }));
   };
 
- 
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSending(true);
@@ -249,7 +237,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       formDataToSend.append('to', formData.to);
       formDataToSend.append('subject', formData.subject);
       formDataToSend.append('message', formData.message);
-      
+
       formData.attachments.forEach(file => {
         formDataToSend.append('files', file);
       });
@@ -263,7 +251,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       if (response.data.success) {
         setSuccessMessage('המייל נשלח בהצלחה!');
         setTimeout(() => setSuccessMessage(''), 2000); // יעלם אחרי 2 שניות
-        
+
         setFormData({
           from: '',
           to: '',
@@ -338,7 +326,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
   };
 
   return (
-    <Paper elevation={3} sx={{ 
+    <Paper elevation={3} sx={{
       p: 3,
       position: 'relative',
       Width: '700px',
@@ -348,7 +336,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       flexDirection: 'column',
       borderRadius: '16px'
     }}>
-      <Box sx={{ 
+      <Box sx={{
         mb: 5,
         mt: 2,
         pb: 3,
@@ -367,15 +355,15 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
           borderRadius: '2px'
         }
       }}>
-        <Box sx={{ 
+        <Box sx={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: 1
         }}>
-          <Typography 
-            variant="h5" 
-            align="center" 
+          <Typography
+            variant="h5"
+            align="center"
             color="primary"
             sx={{
               fontSize: '1.6rem',
@@ -390,10 +378,10 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
           >
             שליחת מייל חדש
           </Typography>
-          <Typography 
-            variant="subtitle1" 
-            align="center" 
-            sx={{ 
+          <Typography
+            variant="subtitle1"
+            align="center"
+            sx={{
               color: 'text.secondary',
               fontSize: '0.95rem',
               maxWidth: '80%',
@@ -406,17 +394,17 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       </Box>
 
       <form onSubmit={handleSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ 
+        <Box sx={{
           display: 'flex',
           flexDirection: 'column',
           gap: 2.5,
           flex: 1
         }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column',  }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', }}>
             <FormControl fullWidth sx={{ mb: 2, ...inputStyles }}>
-            <Typography sx={{direction: 'rtl'}}>
+              <Typography sx={{ direction: 'rtl' }}>
                 שולח
-            </Typography>
+              </Typography>
               <Select
                 name="from"
                 value={formData.from}
@@ -471,10 +459,10 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                 )}
                 {(isSearchOpen ? filteredEmails : allowedEmails).map(email => {
                   const isMatch = searchSender && email.toLowerCase().includes(searchSender.toLowerCase());
-                  
+
                   return (
-                    <MenuItem 
-                      key={email} 
+                    <MenuItem
+                      key={email}
                       value={email}
                       onClick={() => handleSenderSelect(email)}
                       sx={{
@@ -484,8 +472,8 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                         }
                       }}
                     >
-                      <Box sx={{ 
-                        display: 'flex', 
+                      <Box sx={{
+                        display: 'flex',
                         alignItems: 'center',
                         '& .highlighted-text': {
                           backgroundColor: isMatch ? 'primary.main' : 'transparent',
@@ -496,7 +484,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                         }
                       }}>
                         {isMatch ? (
-                          <HighlightedText 
+                          <HighlightedText
                             text={email}
                             highlight={searchSender}
                           />
@@ -526,7 +514,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
               value={formData.to}
               onChange={handleChange}
               required
-              sx={{ 
+              sx={{
                 mb: 2,
                 ...inputStyles,
                 '& .MuiInputLabel-root': {
@@ -544,7 +532,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
               value={formData.subject}
               onChange={handleChange}
               required
-              sx={{ 
+              sx={{
                 mb: 2,
                 ...inputStyles,
                 '& .MuiInputLabel-root': {
@@ -564,7 +552,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
               value={formData.message}
               onChange={handleChange}
               required
-              sx={{ 
+              sx={{
                 mb: 3,
                 ...inputStyles,
                 '& .MuiOutlinedInput-root': {
@@ -581,7 +569,10 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                 startIcon={<AttachFileIcon />}
                 sx={{ mt: 2 }}
               >
-                צרף קבצים (עד 7.5 MB לקובץ)
+                <Typography  sx={{ direction: 'rtl' , fontWeight: 'bold'}}
+                >
+                  צרף קבצים (  קבצים שעולים על 7 MB ישלחו כקישורים ל Google Drive)
+                </Typography>
                 <input
                   type="file"
                   multiple
@@ -592,10 +583,10 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
               </Button>
 
               {error && (
-                <Typography 
-                  color="error" 
-                  variant="body2" 
-                  sx={{ 
+                <Typography
+                  color="error"
+                  variant="body2"
+                  sx={{
                     whiteSpace: 'pre-line',
                     bgcolor: 'error.light',
                     color: 'error.contrastText',
@@ -610,9 +601,9 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
             </Box>
 
             {formData.attachments.length > 0 && (
-              <Paper 
-                variant="outlined" 
-                sx={{ 
+              <Paper
+                variant="outlined"
+                sx={{
                   maxHeight: '78px',
                   overflow: 'auto',
                   mt: 1
@@ -620,7 +611,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
               >
                 <List dense >
                   {formData.attachments.map((file, index) => (
-                    <ListItem 
+                    <ListItem
                       key={index}
                       secondaryAction={
                         <IconButton edge="end" onClick={() => handleRemoveFile(index)}>
@@ -631,7 +622,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                       <ListItemIcon>
                         <AttachFileIcon />
                       </ListItemIcon>
-                      <ListItemText 
+                      <ListItemText
                         primary={file.name}
                         secondary={`${(file.size / 1024 / 1024).toFixed(2)} MB`}
                       />
@@ -642,16 +633,16 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
             )}
           </Box>
 
-          <Box sx={{ 
+          <Box sx={{
             mt: 'auto',
             pt: 3,
             borderTop: '1px solid',
             borderColor: 'divider',
             borderRadius: '0 0 16px 16px'
           }}>
-            <Button 
-              type="submit" 
-              variant="contained" 
+            <Button
+              type="submit"
+              variant="contained"
               endIcon={successMessage ? <></> : isSending ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
               fullWidth
               size="large"
@@ -689,7 +680,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
 
       {/* אנימציית טעינה מעל כל הטופס */}
       <Backdrop
-        sx={{ 
+        sx={{
           position: 'absolute',
           color: '#fff',
           zIndex: (theme) => theme.zIndex.drawer + 1,
@@ -697,11 +688,11 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
         }}
         open={isSending}
       >
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
+        <Box sx={{
+          display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          gap: 2 
+          gap: 2
         }}>
           <CircularProgress color="primary" size={60} />
           <Fade in={isSending}>
