@@ -25,6 +25,11 @@ import SendIcon from '@mui/icons-material/Send';
 import SearchIcon from '@mui/icons-material/Search';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import axios from 'axios';
 import { keyframes } from '@mui/system';
 import config from '../config';
@@ -40,6 +45,11 @@ interface FormData {
 interface EmailFormProps {
   allowedEmails: string[];
   domain: string;
+}
+
+interface Recipient {
+  email: string;
+  name: string;
 }
 
 const HighlightedText = ({ text, highlight }: { text: string; highlight: string }) => {
@@ -157,8 +167,11 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
   const [isSending, setIsSending] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState('');
-  const [recipientSuggestions, setRecipientSuggestions] = useState<string[]>([]);
+  const [recipientSuggestions, setRecipientSuggestions] = useState<Recipient[]>([]);
   const [isRecipientSearchOpen, setIsRecipientSearchOpen] = useState(false);
+  const [editRecipientDialog, setEditRecipientDialog] = useState(false);
+  const [editingRecipient, setEditingRecipient] = useState<Recipient | null>(null);
+  const [newRecipientName, setNewRecipientName] = useState('');
 
   const filteredEmails = allowedEmails.filter(email => {
     const searchLower = searchSender.toLowerCase();
@@ -364,6 +377,44 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       paddingRight: '14px',
       textAlign: 'right',
       paddingLeft: '14px'
+    }
+  };
+
+  const handleEditRecipient = (recipient: Recipient) => {
+    setEditingRecipient(recipient);
+    setNewRecipientName(recipient.name || '');
+    setEditRecipientDialog(true);
+  };
+
+  const handleSaveRecipientName = async () => {
+    if (!editingRecipient) return;
+
+    try {
+      const token = localStorage.getItem('auth-token');
+      if (!token) return;
+
+      await axios.post(`${API_URL}/api/recipients/update`, {
+        email: editingRecipient.email,
+        name: newRecipientName
+      }, {
+        headers: {
+          'x-auth-token': token
+        }
+      });
+
+      // עדכון הרשימה המקומית
+      setRecipientSuggestions(prev => 
+        prev.map(r => 
+          r.email === editingRecipient.email 
+            ? { ...r, name: newRecipientName }
+            : r
+        )
+      );
+
+      setEditRecipientDialog(false);
+    } catch (error) {
+      console.error('Error updating recipient:', error);
+      setError('שגיאה בעדכון פרטי הנמען');
     }
   };
 
@@ -581,11 +632,11 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                   }}
                 >
                   <List>
-                    {recipientSuggestions.map((email, index) => (
+                    {recipientSuggestions.map((recipient, index) => (
                       <ListItem
                         key={index}
-                        component="button"
-                        onClick={() => handleRecipientSelect(email)}
+                        component="div"
+                        onClick={() => handleRecipientSelect(recipient.email)}
                         sx={{ 
                           width: '100%',
                           textAlign: 'right',
@@ -595,17 +646,55 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                           cursor: 'pointer',
                           '&:hover': {
                             backgroundColor: 'action.hover'
-                          }
+                          },
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '8px 16px'
                         }}
                       >
                         <ListItemText 
                           primary={
-                            <HighlightedText 
-                              text={email} 
-                              highlight={formData.to}
-                            />
-                          } 
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <HighlightedText 
+                                text={recipient.email} 
+                                highlight={formData.to}
+                              />
+                              {recipient.name && (
+                                <Typography 
+                                  variant="body2" 
+                                  color="text.secondary"
+                                  sx={{ 
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                    px: 1,
+                                    py: 0.5,
+                                    borderRadius: 1
+                                  }}
+                                >
+                                  <HighlightedText 
+                                    text={recipient.name} 
+                                    highlight={formData.to}
+                                  />
+                                </Typography>
+                              )}
+                            </Box>
+                          }
                         />
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditRecipient(recipient);
+                          }}
+                          size="small"
+                          sx={{ 
+                            ml: 1,
+                            '&:hover': {
+                              backgroundColor: alpha(theme.palette.primary.main, 0.1)
+                            }
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
                       </ListItem>
                     ))}
                   </List>
@@ -790,6 +879,53 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
           </Fade>
         </Box>
       </Backdrop>
+
+      {/* דיאלוג עריכת שם נמען */}
+      <Dialog 
+        open={editRecipientDialog} 
+        onClose={() => setEditRecipientDialog(false)}
+        PaperProps={{
+          sx: {
+            width: '100%',
+            maxWidth: '400px',
+            borderRadius: 2
+          }
+        }}
+      >
+        <DialogTitle sx={{ textAlign: 'center' }}>
+          עריכת פרטי נמען
+        </DialogTitle>
+        <DialogContent >
+          <Box sx={{ pt: 2}}>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              {editingRecipient?.email}
+            </Typography>
+            <TextField
+              fullWidth
+              label="שם הנמען"
+              
+              value={newRecipientName}
+              onChange={(e) => setNewRecipientName(e.target.value)}
+
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, justifyContent: 'center' }}>
+          <Button 
+            onClick={() => setEditRecipientDialog(false)}
+            variant="outlined"
+          >
+            ביטול
+          </Button>
+          <Button 
+            onClick={handleSaveRecipientName}
+            variant="contained"
+            sx={{ minWidth: '120px' }}
+          >
+            שמור
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };
