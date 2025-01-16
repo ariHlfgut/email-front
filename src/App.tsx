@@ -138,11 +138,9 @@ function App() {
 
   const updateServerEmails = async (newEmails: string[]) => {
     try {
-      console.log('Sending update to server:', newEmails);
       const response = await axios.post(`${API_URL}/api/update-allowed-emails`, {
         emails: newEmails
       });
-      console.log('Server response:', response.data);
 
       if (response.data.success) {
         return true;
@@ -157,7 +155,6 @@ function App() {
   };
 
   const handleAddPrefix = async (prefix: string) => {
-    console.log('Adding prefix:', prefix);
     const newEmails = [...allowedEmails, prefix];
     const success = await updateServerEmails(newEmails);
 
@@ -167,7 +164,6 @@ function App() {
   };
 
   const handleRemovePrefix = async (prefix: string) => {
-    console.log('Removing prefix:', prefix);
     const newEmails = allowedEmails.filter(email => email !== prefix);
     const success = await updateServerEmails(newEmails);
 

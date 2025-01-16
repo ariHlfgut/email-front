@@ -33,6 +33,7 @@ import DialogActions from '@mui/material/DialogActions';
 import axios from 'axios';
 import { keyframes } from '@mui/system';
 import config from '../config';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 
 interface FormData {
   from: string;
@@ -141,7 +142,7 @@ const ALLOWED_MIME_TYPES = [
 ];
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB - מגבלה חדשה לקבצים גדולים
-const MAX_FILES = 10;
+const MAX_FILES = 40;
 
 // אנימציה לכפתור
 const sendingAnimation = keyframes`
@@ -417,6 +418,31 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
     }
   };
 
+  const handleDeleteRecipient = async (email: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const token = localStorage.getItem('auth-token');
+      if (!token) return;
+
+      const response = await axios.delete(`${API_URL}/api/recipients/${encodeURIComponent(email)}`, {
+        headers: {
+          'x-auth-token': token
+        }
+      });
+
+      if (response.data.success) {
+        setRecipientSuggestions(prev => prev.filter(r => r.email !== email));
+        setSuccessMessage('הנמען נמחק בהצלחה');
+        setTimeout(() => setSuccessMessage(''), 2000);
+      }
+    } catch (error) {
+      console.error('Error deleting recipient:', error);
+      setError('שגיאה במחיקת הנמען');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
   return (
     <Paper elevation={3} sx={{
       p: 3,
@@ -634,21 +660,20 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                     {recipientSuggestions.map((recipient, index) => (
                       <ListItem
                         key={index}
-                        component="button"
+                        component="div"
                         onClick={() => handleRecipientSelect(recipient.email)}
                         sx={{ 
                           width: '100%',
                           textAlign: 'right',
                           direction: 'rtl',
-                          border: 'none',
-                          background: 'none',
                           cursor: 'pointer',
                           '&:hover': {
                             backgroundColor: 'action.hover'
                           },
                           display: 'flex',
                           justifyContent: 'space-between',
-                          alignItems: 'center'
+                          alignItems: 'center',
+                          gap: 1
                         }}
                       >
                         <ListItemText 
@@ -678,21 +703,34 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                             </Box>
                           }
                         />
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditRecipient(recipient);
-                          }}
-                          size="small"
-                          sx={{ 
-                            ml: 1,
-                            '&:hover': {
-                              backgroundColor: alpha(theme.palette.primary.main, 0.1)
-                            }
-                          }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <IconButton
+                            onClick={(e) => handleDeleteRecipient(recipient.email, e)}
+                            size="small"
+                            sx={{ 
+                              color: 'error.main',
+                              '&:hover': {
+                                backgroundColor: alpha(theme.palette.error.main, 0.1)
+                              }
+                            }}
+                          >
+                            <DeleteForeverIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditRecipient(recipient);
+                            }}
+                            size="small"
+                            sx={{ 
+                              '&:hover': {
+                                backgroundColor: alpha(theme.palette.primary.main, 0.1)
+                              }
+                            }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
                       </ListItem>
                     ))}
                   </List>
@@ -905,9 +943,6 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
               onChange={(e) => setNewRecipientName(e.target.value)}
               sx={{
                 '& .MuiInputLabel-root': {
-                  right: '14px',
-                  left: 'auto',
-                  transformOrigin: 'right'
                 }
               }}
             />
