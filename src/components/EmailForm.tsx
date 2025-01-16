@@ -346,7 +346,6 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
           width: 'auto',
           height: '11px',
           '& span': {
-            padding: '0 1.5px',
             backgroundColor: theme.palette.background.paper
           }
         }
@@ -357,7 +356,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       transition: 'all 0.2s ease-in-out'
     },
     '& .MuiInputLabel-root': {
-      right: '25px',
+      right: '14px',
       left: 'auto',
       transformOrigin: 'right',
       transition: 'all 0.2s ease-in-out',
@@ -708,12 +707,12 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
               name="subject"
               value={formData.subject}
               onChange={handleChange}
-              required
+
               sx={{
                 mb: 2,
                 ...inputStyles,
                 '& .MuiInputLabel-root': {
-                  right: '14px',
+                  right: '22px',
                   left: 'auto',
                   transformOrigin: 'right'
                 }
@@ -731,10 +730,12 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
               required
               sx={{
                 mb: 3,
+                
                 ...inputStyles,
                 '& .MuiOutlinedInput-root': {
                   ...inputStyles['& .MuiOutlinedInput-root'],
-                  minHeight: '120px'
+                  minHeight: '120px',
+                  direction:'rtl'
                 }
               }}
             />
