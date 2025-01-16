@@ -37,7 +37,7 @@ import config from '../config';
 interface FormData {
   from: string;
   to: string;
-  subject: string;
+  subject?: string;
   message: string;
   attachments: File[];
 }
@@ -290,7 +290,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       const formDataToSend = new FormData();
       formDataToSend.append('from', `${formData.from}@${domain}`);
       formDataToSend.append('to', formData.to);
-      formDataToSend.append('subject', formData.subject);
+      formDataToSend.append('subject', formData.subject || '');
       formDataToSend.append('message', formData.message);
 
       formData.attachments.forEach(file => {
@@ -346,6 +346,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
           width: 'auto',
           height: '11px',
           '& span': {
+            padding: '0 1.5px',
             backgroundColor: theme.palette.background.paper
           }
         }
@@ -356,7 +357,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       transition: 'all 0.2s ease-in-out'
     },
     '& .MuiInputLabel-root': {
-      right: '14px',
+      right: '25px',
       left: 'auto',
       transformOrigin: 'right',
       transition: 'all 0.2s ease-in-out',
@@ -634,7 +635,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                     {recipientSuggestions.map((recipient, index) => (
                       <ListItem
                         key={index}
-                        component="div"
+                        component="button"
                         onClick={() => handleRecipientSelect(recipient.email)}
                         sx={{ 
                           width: '100%',
@@ -648,8 +649,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                           },
                           display: 'flex',
                           justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '8px 16px'
+                          alignItems: 'center'
                         }}
                       >
                         <ListItemText 
@@ -707,12 +707,11 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
               name="subject"
               value={formData.subject}
               onChange={handleChange}
-
               sx={{
                 mb: 2,
                 ...inputStyles,
                 '& .MuiInputLabel-root': {
-                  right: '22px',
+                  right: '14px',
                   left: 'auto',
                   transformOrigin: 'right'
                 }
@@ -730,12 +729,10 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
               required
               sx={{
                 mb: 3,
-                
                 ...inputStyles,
                 '& .MuiOutlinedInput-root': {
                   ...inputStyles['& .MuiOutlinedInput-root'],
-                  minHeight: '120px',
-                  direction:'rtl'
+                  minHeight: '120px'
                 }
               }}
             />
@@ -896,18 +893,23 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
         <DialogTitle sx={{ textAlign: 'center' }}>
           עריכת פרטי נמען
         </DialogTitle>
-        <DialogContent >
-          <Box sx={{ pt: 2}}>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
             <Typography variant="body2" sx={{ mb: 1 }}>
               {editingRecipient?.email}
             </Typography>
             <TextField
               fullWidth
               label="שם הנמען"
-              
               value={newRecipientName}
               onChange={(e) => setNewRecipientName(e.target.value)}
-
+              sx={{
+                '& .MuiInputLabel-root': {
+                  right: '14px',
+                  left: 'auto',
+                  transformOrigin: 'right'
+                }
+              }}
             />
           </Box>
         </DialogContent>
