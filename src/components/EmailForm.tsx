@@ -34,6 +34,7 @@ import axios from 'axios';
 import { keyframes } from '@mui/system';
 import config from '../config';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import validator from 'validator';
 
 interface FormData {
   from: string;
@@ -173,6 +174,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
   const [editRecipientDialog, setEditRecipientDialog] = useState(false);
   const [editingRecipient, setEditingRecipient] = useState<Recipient | null>(null);
   const [newRecipientName, setNewRecipientName] = useState('');
+  const [emailError, setEmailError] = useState('');
 
   const filteredEmails = allowedEmails.filter(email => {
     const searchLower = searchSender.toLowerCase();
@@ -196,8 +198,21 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     
-    if ('type' in e.target && name === 'to') {
-      searchRecipients(value);
+    if (name === 'to') {
+      if (!value) {
+        setEmailError('');
+      } else if (!validator.isEmail(value)) {
+        setEmailError('כתובת המייל אינה תקינה');
+      } else {
+        setEmailError('');
+      }
+      
+      if (value.length >= 2) {
+        searchRecipients(value);
+      } else {
+        setRecipientSuggestions([]);
+        setIsRecipientSearchOpen(false);
+      }
     }
   };
 
@@ -280,11 +295,42 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
   const handleRecipientChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
     setFormData(prev => ({ ...prev, to: value }));
-    searchRecipients(value);
+    
+    // ניקוי שגיאה כשהשדה ריק
+    if (!value) {
+      setEmailError('');
+    } 
+    // בדיקת תקינות רק אם יש ערך והמשתמש הפסיק להקליד
+    else if (value.includes('@')) {
+      if (!validator.isEmail(value)) {
+        setEmailError('כתובת המייל אינה תקינה');
+      } else {
+        setEmailError('');
+      }
+    } else {
+      setEmailError('');
+    }
+    
+    // חיפוש נמענים רק אם יש לפחות 2 תווים
+    if (value.length >= 2) {
+      searchRecipients(value);
+    } else {
+      setRecipientSuggestions([]);
+      setIsRecipientSearchOpen(false);
+    }
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(''); // ניקוי שגיאות קודמות
+    
+    // בדיקת תקינות המייל
+    if (!validator.isEmail(formData.to)) {
+      setEmailError('כתובת המייל אינה תקינה');
+      return;
+    }
+    
+    setEmailError(''); // ניקוי שגיאת המייל אם תקין
     setIsSending(true);
 
     try {
@@ -300,14 +346,13 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
 
       const response = await axios.post(`${API_URL}/api/send-email`, formDataToSend, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'x-auth-token': localStorage.getItem('auth-token')
         }
       });
 
       if (response.data.success) {
         setSuccessMessage('המייל נשלח בהצלחה!');
-        setTimeout(() => setSuccessMessage(''), 2000); // יעלם אחרי 2 שניות
-
         setFormData({
           from: '',
           to: '',
@@ -315,11 +360,16 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
           message: '',
           attachments: []
         });
+        setEmailError(''); // ניקוי שגיאות אחרי שליחה מוצלחת
+        setTimeout(() => setSuccessMessage(''), 2000);
       }
     } catch (error) {
       console.error('Error sending email:', error);
-      setSuccessMessage('שגיאה בשליחת המייל');
-      setTimeout(() => setSuccessMessage(''), 2000);
+      if (axios.isAxiosError(error)) {
+        setError(error.response?.data?.error || 'שגיאה בשליחת המייל');
+      } else {
+        setError('שגיאה בשליחת המייל');
+      }
     } finally {
       setIsSending(false);
     }
@@ -632,12 +682,15 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                 value={formData.to}
                 onChange={handleRecipientChange}
                 required
+                error={!!emailError}
+                helperText={emailError}
                 sx={{
+                  mb: 2,
                   ...inputStyles,
-                  '& .MuiInputLabel-root': {
-                    right: '14px',
-                    left: 'auto',
-                    transformOrigin: 'right'
+                  '& .MuiFormHelperText-root': {
+                    textAlign: 'right',
+                    marginRight: 0,
+                    marginLeft: 'auto'
                   }
                 }}
               />
