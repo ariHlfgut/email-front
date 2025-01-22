@@ -17,6 +17,7 @@ import axios from 'axios';
 import { AuthDialog } from './components/AuthDialog';
 import config from './config';
 import { Navigation } from './components/Navigation';
+import ContactButton from './components/ContactButton';
 
 // אנימציות
 
@@ -293,8 +294,6 @@ function App() {
             currentPage={currentPage}
             onPageChange={setCurrentPage}
           />
-
-
           <Box sx={{
             flex: 1,
             overflow: 'auto',
@@ -321,6 +320,7 @@ function App() {
           </Box>
         </Box>
       </Box>
+      <ContactButton/>
     </ThemeProvider>
   );
 }
