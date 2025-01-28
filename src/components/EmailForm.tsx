@@ -20,7 +20,9 @@ import {
   useTheme,
   ListItemIcon,
   SelectChangeEvent,
-  LinearProgress
+  LinearProgress,
+  Chip,
+  Stack
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import SearchIcon from '@mui/icons-material/Search';
@@ -36,10 +38,11 @@ import { keyframes } from '@mui/system';
 import config from '../config';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import validator from 'validator';
+import PersonIcon from '@mui/icons-material/Person';
 
 interface FormData {
   from: string;
-  to: string;
+  to: string[];
   subject?: string;
   message: string;
   attachments: File[];
@@ -166,7 +169,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
   const theme = useTheme();
   const [formData, setFormData] = useState<FormData>({
     from: '',
-    to: '',
+    to: [],
     subject: '',
     message: '',
     attachments: []
@@ -186,6 +189,8 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
   const [uploadedFiles, setUploadedFiles] = useState<{
     [key: string]: UploadedFile
   }>({});
+
+  const [currentEmail, setCurrentEmail] = useState('');
 
   const filteredEmails = allowedEmails.filter(email => {
     const searchLower = searchSender.toLowerCase();
@@ -208,7 +213,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
   ) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     if (name === 'to') {
       if (!value) {
         setEmailError('');
@@ -217,7 +222,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       } else {
         setEmailError('');
       }
-      
+
       if (value.length >= 2) {
         searchRecipients(value);
       } else {
@@ -261,8 +266,8 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       if (file.size > 7 * 1024 * 1024) {
         setUploadedFiles(prev => ({
           ...prev,
-          [file.name]: { 
-            progress: 0, 
+          [file.name]: {
+            progress: 0,
             size: file.size,
             name: file.name
           }
@@ -281,8 +286,8 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
               const progress = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
               setUploadedFiles(prev => ({
                 ...prev,
-                [file.name]: { 
-                  ...prev[file.name], 
+                [file.name]: {
+                  ...prev[file.name],
                   progress
                 }
               }));
@@ -291,8 +296,8 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
 
           setUploadedFiles(prev => ({
             ...prev,
-            [file.name]: { 
-              ...prev[file.name], 
+            [file.name]: {
+              ...prev[file.name],
               progress: 100,
               link: response.data.link
             }
@@ -301,13 +306,13 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
         } catch (error) {
           console.error('Error uploading file:', error);
           setError(`שגיאה בהעלאת הקובץ ${file.name}`);
-          
+
           // הסרת הקובץ שנכשל
           setFormData(prev => ({
             ...prev,
             attachments: prev.attachments.filter(f => f.name !== file.name)
           }));
-          
+
           setUploadedFiles(prev => {
             const newState = { ...prev };
             delete newState[file.name];
@@ -319,10 +324,22 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
   };
 
   const handleRemoveFile = (index: number) => {
+    const fileToRemove = formData.attachments[index];
+    
+    // הסרת הקובץ מהרשימה
     setFormData(prev => ({
       ...prev,
       attachments: prev.attachments.filter((_, i) => i !== index)
     }));
+
+    // הסרת המידע על הקובץ מ-uploadedFiles אם קיים
+    if (uploadedFiles[fileToRemove.name]) {
+      setUploadedFiles(prev => {
+        const newState = { ...prev };
+        delete newState[fileToRemove.name];
+        return newState;
+      });
+    }
   };
 
   const searchRecipients = async (query: string) => {
@@ -342,7 +359,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
           'x-auth-token': token
         }
       });
-      
+
       if (response.data.recipients) {
         setRecipientSuggestions(response.data.recipients);
         setIsRecipientSearchOpen(true);
@@ -352,21 +369,41 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
     }
   };
 
-  const handleRecipientSelect = (email: string) => {
-    setFormData(prev => ({ ...prev, to: email }));
-    setIsRecipientSearchOpen(false);
+  const handleAddRecipient = (email: string) => {
+    if (validator.isEmail(email) && !formData.to.includes(email)) {
+      setFormData(prev => ({
+        ...prev,
+        to: [...prev.to, email]
+      }));
+      setCurrentEmail('');
+      setEmailError('');
+    }
+  };
+
+  const handleRemoveRecipient = (emailToRemove: string) => {
+    setFormData(prev => ({
+      ...prev,
+      to: prev.to.filter(email => email !== emailToRemove)
+    }));
   };
 
   const handleRecipientChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
-    setFormData(prev => ({ ...prev, to: value }));
-    
-    // ניקוי שגיאה כשהשדה ריק
+    setCurrentEmail(value);
+
+    // הוספת מייל כשמוסיפים פסיק או רווח
+    if (value.endsWith(',') || value.endsWith(' ')) {
+      const email = value.slice(0, -1).trim();
+      if (validator.isEmail(email)) {
+        handleAddRecipient(email);
+        return;
+      }
+    }
+
+    // המשך הלוגיקה הקיימת של החיפוש
     if (!value) {
       setEmailError('');
-    } 
-    // בדיקת תקינות רק אם יש ערך והמשתמש הפסיק להקליד
-    else if (value.includes('@')) {
+    } else if (value.includes('@')) {
       if (!validator.isEmail(value)) {
         setEmailError('כתובת המייל אינה תקינה');
       } else {
@@ -375,8 +412,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
     } else {
       setEmailError('');
     }
-    
-    // חיפוש נמענים רק אם יש לפחות 2 תווים
+
     if (value.length >= 2) {
       searchRecipients(value);
     } else {
@@ -385,13 +421,35 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
     }
   };
 
+  const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (validator.isEmail(currentEmail)) {
+        handleAddRecipient(currentEmail);
+      }
+    }
+  };
+
+  const handleRecipientSelect = (email: string) => {
+    handleAddRecipient(email);
+    setIsRecipientSearchOpen(false);
+    setRecipientSuggestions([]);
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 
-    // בדיקת תקינות המייל
-    if (!validator.isEmail(formData.to)) {
-      setEmailError('כתובת המייל אינה תקינה');
+    // בדיקה שיש לפחות נמען אחד
+    if (formData.to.length === 0) {
+      setEmailError('יש להזין לפחות נמען אחד');
+      return;
+    }
+
+    // בדיקת תקינות כל המיילים
+    const invalidEmails = formData.to.filter(email => !validator.isEmail(email));
+    if (invalidEmails.length > 0) {
+      setEmailError(`כתובות המייל הבאות אינן תקינות: ${invalidEmails.join(', ')}`);
       return;
     }
 
@@ -412,7 +470,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('from', `${formData.from}@${domain}`);
-      formDataToSend.append('to', formData.to);
+      formDataToSend.append('to', formData.to.join(','));
       formDataToSend.append('subject', formData.subject || '');
       formDataToSend.append('message', formData.message);
 
@@ -441,16 +499,20 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       });
 
       if (response.data.success) {
-        setSuccessMessage('המייל נשלח בהצלחה!');
+        setSuccessMessage('המייל נשלח בהצלחה');
+        // ניקוי הטופס
         setFormData({
           from: '',
-          to: '',
+          to: [],
           subject: '',
           message: '',
           attachments: []
         });
+        // ניקוי הקבצים שהועלו לדרייב
         setEmailError(''); // ניקוי שגיאות אחרי שליחה מוצלחת
         setTimeout(() => setSuccessMessage(''), 2000);
+        setUploadedFiles({});
+        setCurrentEmail('');
       }
     } catch (error) {
       console.error('Error sending email:', error);
@@ -542,9 +604,9 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       });
 
       // עדכון הרשימה המקומית
-      setRecipientSuggestions(prev => 
-        prev.map(r => 
-          r.email === editingRecipient.email 
+      setRecipientSuggestions(prev =>
+        prev.map(r =>
+          r.email === editingRecipient.email
             ? { ...r, name: newRecipientName }
             : r
         )
@@ -559,7 +621,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
 
   const handleDeleteRecipient = async (email: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     try {
       const token = localStorage.getItem('auth-token');
       if (!token) return;
@@ -587,14 +649,14 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       p: 3,
       position: 'relative',
       Width: '700px',
-      height: '54.59rem',
+      minHeight: '54.59rem',
       margin: '0 auto',
       display: 'flex',
       flexDirection: 'column',
       borderRadius: '16px'
     }}>
       <Box sx={{
-        mb: 5,
+        mb: 2,
         mt: 2,
         pb: 3,
         borderBottom: '2px solid',
@@ -698,7 +760,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                       value={searchSender}
                       onChange={handleSearchChange}
                       onClick={(e) => e.stopPropagation()}
-                      placeholder="חפש שולח..."
+                      placeholder="...חפש שולח"
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
@@ -764,29 +826,56 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
             </FormControl>
 
             <FormControl fullWidth sx={{ mb: 2, position: 'relative' }}>
+              {formData.to.length > 0 && (
+                <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
+                  {formData.to.map((email) => (
+                    <Chip
+                      key={email}
+                      icon={<PersonIcon />}
+                      label={email}
+                      onDelete={() => handleRemoveRecipient(email)}
+                      sx={{
+                        borderRadius: '8px',
+                        bgcolor: 'primary.light',
+                        color: 'primary.contrastText',
+                        '& .MuiChip-deleteIcon': {
+                          color: 'primary.contrastText',
+                          '&:hover': {
+                            color: 'error.light'
+                          }
+                        }
+                      }}
+                    />
+                  ))}
+                </Stack>
+              )}
+
               <TextField
-                label="נמען"
+                label="נמענים"
                 name="to"
-                type="email"
-                value={formData.to}
+                value={currentEmail}
                 onChange={handleRecipientChange}
-                required
+                onKeyDown={handleEmailKeyDown}
                 error={!!emailError}
                 helperText={emailError}
                 sx={{
-                  mb: 2,
                   ...inputStyles,
                   '& .MuiFormHelperText-root': {
                     textAlign: 'right',
                     marginRight: 0,
                     marginLeft: 'auto'
-                  }
+                  },
+                   '& .MuiInputLabel-root': {
+                  right: '22px',
+                  left: 'auto',
+                  transformOrigin: 'right'
+                }
                 }}
               />
-              
+
               {isRecipientSearchOpen && recipientSuggestions.length > 0 && (
-                <Paper 
-                  sx={{ 
+                <Paper
+                  sx={{
                     position: 'absolute',
                     top: '100%',
                     left: 0,
@@ -804,7 +893,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                         key={index}
                         component="div"
                         onClick={() => handleRecipientSelect(recipient.email)}
-                        sx={{ 
+                        sx={{
                           width: '100%',
                           textAlign: 'right',
                           direction: 'rtl',
@@ -818,27 +907,27 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                           gap: 1
                         }}
                       >
-                        <ListItemText 
+                        <ListItemText
                           primary={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <HighlightedText 
-                                text={recipient.email} 
-                                highlight={formData.to}
+                              <HighlightedText
+                                text={recipient.email}
+                                highlight={formData.to.join(',')}
                               />
                               {recipient.name && (
-                                <Typography 
-                                  variant="body2" 
+                                <Typography
+                                  variant="body2"
                                   color="text.secondary"
-                                  sx={{ 
+                                  sx={{
                                     backgroundColor: alpha(theme.palette.primary.main, 0.1),
                                     px: 1,
                                     py: 0.5,
                                     borderRadius: 1
                                   }}
                                 >
-                                  <HighlightedText 
-                                    text={recipient.name} 
-                                    highlight={formData.to}
+                                  <HighlightedText
+                                    text={recipient.name}
+                                    highlight={formData.to.join(',')}
                                   />
                                 </Typography>
                               )}
@@ -849,7 +938,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                           <IconButton
                             onClick={(e) => handleDeleteRecipient(recipient.email, e)}
                             size="small"
-                            sx={{ 
+                            sx={{
                               color: 'error.main',
                               '&:hover': {
                                 backgroundColor: alpha(theme.palette.error.main, 0.1)
@@ -864,7 +953,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                               handleEditRecipient(recipient);
                             }}
                             size="small"
-                            sx={{ 
+                            sx={{
                               '&:hover': {
                                 backgroundColor: alpha(theme.palette.primary.main, 0.1)
                               }
@@ -912,7 +1001,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                 '& .MuiOutlinedInput-root': {
                   ...inputStyles['& .MuiOutlinedInput-root'],
                   minHeight: '120px',
-                  direction:'rtl'
+                  direction: 'rtl'
                 }
               }}
             />
@@ -924,7 +1013,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                 startIcon={<AttachFileIcon />}
                 sx={{ mt: 0.5 }}
               >
-                <Typography  sx={{ direction: 'rtl' , fontWeight: 'bold'}}
+                <Typography sx={{ direction: 'rtl', fontWeight: 'bold' }}
                 >
                   צרף קבצים (  קבצים שעולים על 7 MB ישלחו כקישורים ל Google Drive)
                 </Typography>
@@ -975,13 +1064,13 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                         secondary={
                           uploadedFiles[file.name] ? (
                             <Box sx={{ width: '100%' }}>
-                              <LinearProgress 
-                                variant="determinate" 
-                                value={uploadedFiles[file.name].progress  + (uploadedFiles[file.name].link === undefined ? - 70 : 0) } 
+                              <LinearProgress
+                                variant="determinate"
+                                value={uploadedFiles[file.name].progress + (uploadedFiles[file.name].link === undefined ? - 70 : 0)}
                                 sx={{ height: 8, borderRadius: 4 }}
                               />
                               <Typography variant="caption" sx={{ mt: 0.5 }}>
-                                {uploadedFiles[file.name].progress  + (uploadedFiles[file.name].link === undefined ? - 70 : 0)}% 
+                                {uploadedFiles[file.name].progress + (uploadedFiles[file.name].link === undefined ? - 70 : 0)}%
                                 {uploadedFiles[file.name].link ? 'הועלה' : '...מעלה'}
                               </Typography>
                             </Box>
@@ -1068,8 +1157,8 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       </Backdrop>
 
       {/* דיאלוג עריכת שם נמען */}
-      <Dialog 
-        open={editRecipientDialog} 
+      <Dialog
+        open={editRecipientDialog}
         onClose={() => setEditRecipientDialog(false)}
         PaperProps={{
           sx: {
@@ -1100,13 +1189,13 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, justifyContent: 'center' }}>
-          <Button 
+          <Button
             onClick={() => setEditRecipientDialog(false)}
             variant="outlined"
           >
             ביטול
           </Button>
-          <Button 
+          <Button
             onClick={handleSaveRecipientName}
             variant="contained"
             sx={{ minWidth: '120px' }}
