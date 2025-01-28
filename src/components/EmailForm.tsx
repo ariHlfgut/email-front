@@ -326,7 +326,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
   const handleRemoveFile = (index: number) => {
     const fileToRemove = formData.attachments[index];
     
-    // הסרת הקובץ מהרשימה
+    // הסרת הקובץ מהרשימה  
     setFormData(prev => ({
       ...prev,
       attachments: prev.attachments.filter((_, i) => i !== index)
