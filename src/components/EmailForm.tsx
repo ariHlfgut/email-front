@@ -19,7 +19,8 @@ import {
   alpha,
   useTheme,
   ListItemIcon,
-  SelectChangeEvent
+  SelectChangeEvent,
+  LinearProgress
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import SearchIcon from '@mui/icons-material/Search';
@@ -51,6 +52,13 @@ interface EmailFormProps {
 
 interface Recipient {
   email: string;
+  name: string;
+}
+
+interface UploadedFile {
+  progress: number;
+  link?: string;
+  size: number;
   name: string;
 }
 
@@ -175,6 +183,9 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
   const [editingRecipient, setEditingRecipient] = useState<Recipient | null>(null);
   const [newRecipientName, setNewRecipientName] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState<{
+    [key: string]: UploadedFile
+  }>({});
 
   const filteredEmails = allowedEmails.filter(email => {
     const searchLower = searchSender.toLowerCase();
@@ -216,41 +227,95 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
     }
   };
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
 
-    // בדיקת מספר קבצים
+    // בדיקות תקינות
     if (formData.attachments.length + files.length > MAX_FILES) {
       setError(`לא ניתן להעלות יותר מ-${MAX_FILES} קבצים`);
       return;
     }
 
-    // בדיקת גודל מקסימלי לכל קובץ
-    const oversizedFiles = files.filter(file => file.size > MAX_FILE_SIZE);
-    if (oversizedFiles.length > 0) {
-      setError(
-        `הקבצים הבאים חורגים מהגודל המקסימלי (100MB):\n` +
-        oversizedFiles.map(file =>
-          `${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`
-        ).join('\n')
-      );
-      return;
-    }
-
-    // בדיקת סוג הקובץ
     const invalidFiles = files.filter(file => !ALLOWED_MIME_TYPES.includes(file.type));
     if (invalidFiles.length > 0) {
-      setError(
-        `סוג הקובץ אינו נתמך:\n${invalidFiles.map(f => f.name).join('\n')}`
-      );
+      setError(`סוג הקובץ ${invalidFiles[0].name} אינו נתמך`);
       return;
     }
 
-    setError(''); // ניקוי שגיאות אם הכל תקין
+    const oversizedFiles = files.filter(file => file.size > MAX_FILE_SIZE);
+    if (oversizedFiles.length > 0) {
+      setError(`הקובץ ${oversizedFiles[0].name} גדול מדי (מקסימום 100MB)`);
+      return;
+    }
+
+    setError('');
+
+    // הוספת הקבצים ל-state
     setFormData(prev => ({
       ...prev,
       attachments: [...prev.attachments, ...files]
     }));
+
+    // העלאת קבצים גדולים לדרייב
+    for (const file of files) {
+      if (file.size > 7 * 1024 * 1024) {
+        setUploadedFiles(prev => ({
+          ...prev,
+          [file.name]: { 
+            progress: 0, 
+            size: file.size,
+            name: file.name
+          }
+        }));
+
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const response = await axios.post(`${API_URL}/api/upload-to-drive`, formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+              'x-auth-token': localStorage.getItem('auth-token')
+            },
+            onUploadProgress: (progressEvent) => {
+              const progress = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+              setUploadedFiles(prev => ({
+                ...prev,
+                [file.name]: { 
+                  ...prev[file.name], 
+                  progress
+                }
+              }));
+            }
+          });
+
+          setUploadedFiles(prev => ({
+            ...prev,
+            [file.name]: { 
+              ...prev[file.name], 
+              progress: 100,
+              link: response.data.link
+            }
+          }));
+
+        } catch (error) {
+          console.error('Error uploading file:', error);
+          setError(`שגיאה בהעלאת הקובץ ${file.name}`);
+          
+          // הסרת הקובץ שנכשל
+          setFormData(prev => ({
+            ...prev,
+            attachments: prev.attachments.filter(f => f.name !== file.name)
+          }));
+          
+          setUploadedFiles(prev => {
+            const newState = { ...prev };
+            delete newState[file.name];
+            return newState;
+          });
+        }
+      }
+    }
   };
 
   const handleRemoveFile = (index: number) => {
@@ -322,15 +387,26 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(''); // ניקוי שגיאות קודמות
-    
+    setError('');
+
     // בדיקת תקינות המייל
     if (!validator.isEmail(formData.to)) {
       setEmailError('כתובת המייל אינה תקינה');
       return;
     }
-    
-    setEmailError(''); // ניקוי שגיאת המייל אם תקין
+
+    // בדיקה שכל הקבצים הגדולים הועלו
+    const largeFiles = formData.attachments.filter(file => file.size > 7 * 1024 * 1024);
+    const pendingUploads = largeFiles.some(file => 
+      !uploadedFiles[file.name]?.link || uploadedFiles[file.name].progress < 100
+    );
+
+    if (pendingUploads) {
+      setError('אנא המתן לסיום העלאת כל הקבצים לדרייב');
+      return;
+    }
+
+    setEmailError('');
     setIsSending(true);
 
     try {
@@ -340,9 +416,22 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
       formDataToSend.append('subject', formData.subject || '');
       formDataToSend.append('message', formData.message);
 
-      formData.attachments.forEach(file => {
+      // שליחת רק קבצים קטנים
+      const smallFiles = formData.attachments.filter(file => file.size <= 7 * 1024 * 1024);
+      smallFiles.forEach(file => {
         formDataToSend.append('files', file);
       });
+
+      // הוספת קישורים לקבצים שכבר הועלו
+      const driveLinks = Object.values(uploadedFiles)
+        .filter(file => file.link)
+        .map(file => ({
+          filename: file.name,
+          link: file.link,
+          size: (file.size / (1024 * 1024)).toFixed(2)
+        }));
+
+      formDataToSend.append('driveLinks', JSON.stringify(driveLinks));
 
       const response = await axios.post(`${API_URL}/api/send-email`, formDataToSend, {
         headers: {
@@ -833,7 +922,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                 component="label"
                 variant="outlined"
                 startIcon={<AttachFileIcon />}
-                sx={{ mt: 2 }}
+                sx={{ mt: 0.5 }}
               >
                 <Typography  sx={{ direction: 'rtl' , fontWeight: 'bold'}}
                 >
@@ -856,7 +945,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                     whiteSpace: 'pre-line',
                     bgcolor: 'error.light',
                     color: 'error.contrastText',
-                    p: 1,
+                    p: 0.1,
                     borderRadius: 1,
                     fontSize: '0.875rem'
                   }}
@@ -867,15 +956,8 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
             </Box>
 
             {formData.attachments.length > 0 && (
-              <Paper
-                variant="outlined"
-                sx={{
-                  maxHeight: '78px',
-                  overflow: 'auto',
-                  mt: 1
-                }}
-              >
-                <List dense >
+              <Paper variant="outlined" sx={{ maxHeight: '78px', overflow: 'auto', mt: 1 }}>
+                <List dense>
                   {formData.attachments.map((file, index) => (
                     <ListItem
                       key={index}
@@ -890,7 +972,23 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                       </ListItemIcon>
                       <ListItemText
                         primary={file.name}
-                        secondary={`${(file.size / 1024 / 1024).toFixed(2)} MB`}
+                        secondary={
+                          uploadedFiles[file.name] ? (
+                            <Box sx={{ width: '100%' }}>
+                              <LinearProgress 
+                                variant="determinate" 
+                                value={uploadedFiles[file.name].progress  + (uploadedFiles[file.name].link === undefined ? - 70 : 0) } 
+                                sx={{ height: 8, borderRadius: 4 }}
+                              />
+                              <Typography variant="caption" sx={{ mt: 0.5 }}>
+                                {uploadedFiles[file.name].progress  + (uploadedFiles[file.name].link === undefined ? - 70 : 0)}% 
+                                {uploadedFiles[file.name].link ? 'הועלה' : '...מעלה'}
+                              </Typography>
+                            </Box>
+                          ) : (
+                            `${(file.size / 1024 / 1024).toFixed(2)} MB`
+                          )
+                        }
                       />
                     </ListItem>
                   ))}
@@ -938,7 +1036,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                 }
               }}
             >
-              {successMessage ? successMessage : isSending ? 'שולח...' : 'שלח מייל'}
+              {successMessage ? successMessage : isSending ? '...שולח' : 'שלח מייל'}
             </Button>
           </Box>
         </Box>
@@ -963,7 +1061,7 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
           <CircularProgress color="primary" size={60} />
           <Fade in={isSending}>
             <Typography variant="h6" color="primary">
-              שולח את המייל...
+              ...שולח את המייל
             </Typography>
           </Fade>
         </Box>

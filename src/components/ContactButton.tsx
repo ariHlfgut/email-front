@@ -46,7 +46,7 @@ const ContactButton = () => {
       });
 
       if (response.data.success) {
-        setSuccessMessage('ההודעה נשלחה בהצלחה!');
+        setSuccessMessage('ההודעה נשלחה בהצלחה');
         setContactDialogOpen(false);
         setContactForm({ name: '', email: '', message: '' });
         setTimeout(() => setSuccessMessage(''), 2000);
