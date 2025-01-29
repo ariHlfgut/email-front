@@ -206,7 +206,7 @@ function App() {
         >
 
           <Box sx={{
-            maxWidth: '900px',
+            // maxWidth: '900px',
             margin: '0 auto',
             height: '4rem',
             position: 'relative',
@@ -215,44 +215,7 @@ function App() {
             justifyContent: 'space-around',
             width: '100%',
           }}>
-            <Box sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 3,
-              flex: 1
-            }}>
-              <Box sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2
-              }}>
-                <MailIcon sx={{ fontSize: 24 }} />
-                <Typography
-                  variant="h5"
-                  sx={{
-                    fontSize: '1.7rem',
-                    fontWeight: 750
-                  }}
-                >
-                  מערכת שליחת מיילים
-                </Typography>
-              </Box>
-
-              <Box sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2
-              }}>
-                <Typography sx={{ fontSize: '1.2rem', fontWeight: 500 }}>
-                  {domain}
-                </Typography>
-                <Typography sx={{ fontSize: '1.2rem', fontWeight: 500 }}>
-                  שלום {username}
-                </Typography>
-              </Box>
-            </Box>
-
-            <Box sx={{
+                          <Box sx={{
               background: `linear-gradient(45deg, ${rtlTheme.palette.primary.dark} 30%, ${rtlTheme.palette.primary.main} 90%)`,
               color: 'white',
               px: 1.5,
@@ -267,13 +230,60 @@ function App() {
               border: '1px solid',
               borderColor: alpha(rtlTheme.palette.primary.light, 0.3),
               textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              position: 'absolute',
-              right: 'calc(100% + 20rem)'
+              marginLeft: '10px',
             }}>
               <span style={{ fontSize: '0.8em', marginRight: '2px' }}>⭐</span>
               משתמש פרו
             </Box>
+            
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              margin: '50px',
+
+              gap: 3,
+              flex: 1
+            }}>
+
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2
+              }}>
+                <MailIcon sx={{ fontSize: 24 }} />
+                
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontSize: 24,
+                    fontWeight: 500
+                  }}
+                >
+                  מערכת שליחת מיילים
+                </Typography>
+                <Typography sx={{ fontSize:17, fontWeight: 500,marginTop:0.5}}>
+                  {domain}
+                </Typography>
+              </Box>
+
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2
+              }}>
+                
+                
+                <Typography sx={{ fontSize: '1.2rem', fontWeight: 500 }}>
+                  שלום {username}
+                </Typography>
+                
+              </Box>
+              
+              
+            </Box>
+
+            
           </Box>
         </Paper>
 

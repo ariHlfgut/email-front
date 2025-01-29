@@ -1066,11 +1066,11 @@ const EmailForm = ({ allowedEmails, domain }: EmailFormProps) => {
                             <Box sx={{ width: '100%' }}>
                               <LinearProgress
                                 variant="determinate"
-                                value={uploadedFiles[file.name].progress + (uploadedFiles[file.name].link === undefined ? - 70 : 0)}
+                                value={uploadedFiles[file.name].progress }
                                 sx={{ height: 8, borderRadius: 4 }}
                               />
                               <Typography variant="caption" sx={{ mt: 0.5 }}>
-                                {uploadedFiles[file.name].progress + (uploadedFiles[file.name].link === undefined ? - 70 : 0)}%
+                                {uploadedFiles[file.name].progress}%
                                 {uploadedFiles[file.name].link ? 'הועלה' : '...מעלה'}
                               </Typography>
                             </Box>
